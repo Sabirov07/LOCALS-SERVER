@@ -1,0 +1,310 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @db.Uuid
+  email     String
+  username  String?  @unique
+  fullName  String?  @map("full_name")
+  avatarUrl String?  @map("avatar_url")
+  role      String   @default("individual")
+  city      String?
+  district  String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  businesses       Business[]
+  follows          Follow[]         @relation("follower")
+  posts            Post[]
+  conversations1   Conversation[]   @relation("participant1")
+  conversations2   Conversation[]   @relation("participant2")
+  messages         Message[]
+  groups           Group[]
+  groupMembers     GroupMember[]
+  groupMessages    GroupMessage[]
+  rfqs             RFQ[]
+  quotes           Quote[]          @relation("quoteSupplier")
+  sourcingRequests SourcingRequest[]
+
+  @@map("users")
+}
+
+model Business {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  name          String
+  category      String
+  description   String?
+  city          String
+  district      String?
+  avatarUrl     String?  @map("avatar_url")
+  coverImageUrl String?  @map("cover_image_url")
+  isVerified    Boolean  @default(false) @map("is_verified")
+  tags          String[] @default([])
+  companyType   String?  @default("supplier") @map("company_type")
+  industry      String?
+  yearEstablished Int?   @map("year_established")
+  employeeCount String?  @map("employee_count")
+  annualRevenue String?  @map("annual_revenue")
+  certifications String[] @default([])
+  moq           String?
+  leadTime      String?  @map("lead_time")
+  paymentTerms  String[] @default([]) @map("payment_terms")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products   Product[]
+  categories Category[]
+  follows    Follow[]
+  quotes     Quote[]
+
+  @@index([userId])
+  @@index([city])
+  @@index([industry])
+  @@index([companyType])
+  @@map("businesses")
+}
+
+model Category {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  businessId String   @map("business_id") @db.Uuid
+  name       String
+  description String?
+  icon       String?
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@index([businessId])
+  @@map("categories")
+}
+
+model Product {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  businessId    String   @map("business_id") @db.Uuid
+  categoryId    String?  @map("category_id") @db.Uuid
+  name          String
+  description   String?
+  price         Decimal  @db.Decimal(10, 2)
+  category      String
+  imageUrls     String[] @default([]) @map("image_urls")
+  isAvailable   Boolean  @default(true) @map("is_available")
+  moq           Int?     @default(1)
+  unit          String?  @default("pieces")
+  leadTime      String?  @map("lead_time")
+  specifications Json?   @default("{}")
+  priceRanges   Json?    @default("[]") @map("price_ranges")
+  bulkPricing   Json?    @default("[]") @map("bulk_pricing")
+  sampleAvailable Boolean? @default(false) @map("sample_available")
+  samplePrice   Decimal?  @map("sample_price") @db.Decimal(10, 2)
+  customizable  Boolean?  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  business         Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessCategory Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@index([categoryId])
+  @@index([category])
+  @@map("products")
+}
+
+model Follow {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  followerId  String   @map("follower_id") @db.Uuid
+  followingId String   @map("following_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  follower  User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following Business @relation(fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Post {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  authorId   String   @map("author_id") @db.Uuid
+  businessId String?  @map("business_id") @db.Uuid
+  type       String
+  title      String
+  content    String
+  city       String
+  imageUrls  String[] @default([]) @map("image_urls")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([city])
+  @@index([createdAt(sort: Desc)])
+  @@map("posts")
+}
+
+model Conversation {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  participant1Id String    @map("participant1_id") @db.Uuid
+  participant2Id String    @map("participant2_id") @db.Uuid
+  lastMessageAt  DateTime? @map("last_message_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  participant1 User      @relation("participant1", fields: [participant1Id], references: [id], onDelete: Cascade)
+  participant2 User      @relation("participant2", fields: [participant2Id], references: [id], onDelete: Cascade)
+  messages     Message[]
+
+  @@unique([participant1Id, participant2Id])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  senderId       String   @map("sender_id") @db.Uuid
+  content        String
+  messageType    String   @default("text") @map("message_type")
+  imageUrl       String?  @map("image_url")
+  isRead         Boolean  @default(false) @map("is_read")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt(sort: Desc)])
+  @@map("messages")
+}
+
+model Group {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String
+  description String?
+  city        String
+  category    String
+  avatarUrl   String?  @map("avatar_url")
+  createdBy   String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  creator       User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  members       GroupMember[]
+  groupMessages GroupMessage[]
+
+  @@index([city])
+  @@map("groups")
+}
+
+model GroupMember {
+  id       String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  groupId  String   @map("group_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  role     String   @default("member")
+  joinedAt DateTime @default(now()) @map("joined_at") @db.Timestamptz
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+model GroupMessage {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  groupId     String   @map("group_id") @db.Uuid
+  senderId    String   @map("sender_id") @db.Uuid
+  content     String
+  messageType String   @default("text") @map("message_type")
+  imageUrl    String?  @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([createdAt(sort: Desc)])
+  @@map("group_messages")
+}
+
+model RFQ {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  buyerId         String   @map("buyer_id") @db.Uuid
+  title           String
+  description     String
+  industry        String
+  quantity        Int
+  unit            String   @default("pieces")
+  budget          String?
+  deadline        DateTime? @db.Timestamptz
+  specifications  Json?    @default("{}")
+  attachmentUrls  String[] @default([]) @map("attachment_urls")
+  status          String   @default("open")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  buyer  User    @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  quotes Quote[]
+
+  @@index([buyerId])
+  @@index([industry])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("rfqs")
+}
+
+model Quote {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  rfqId      String   @map("rfq_id") @db.Uuid
+  supplierId String   @map("supplier_id") @db.Uuid
+  businessId String   @map("business_id") @db.Uuid
+  unitPrice  Decimal  @map("unit_price") @db.Decimal(10, 2)
+  totalPrice Decimal  @map("total_price") @db.Decimal(10, 2)
+  moq        Int      @default(1)
+  leadTime   String   @map("lead_time")
+  notes      String?
+  validUntil DateTime @map("valid_until") @db.Timestamptz
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  rfq      RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplier User     @relation("quoteSupplier", fields: [supplierId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([rfqId])
+  @@index([supplierId])
+  @@index([businessId])
+  @@map("quotes")
+}
+
+model SourcingRequest {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  buyerId     String   @map("buyer_id") @db.Uuid
+  title       String
+  description String
+  category    String
+  quantity    Int?
+  unit        String?
+  budget      String?
+  city        String
+  status      String   @default("open")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  buyer User @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@index([city])
+  @@index([status])
+  @@index([buyerId])
+  @@index([createdAt(sort: Desc)])
+  @@map("sourcing_requests")
+}
