@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { json, error, getAuthUserId } from '@/lib/api-utils';
+import { getAuthUser } from '@/lib/supabase';
 
 // GET /api/businesses — list/search businesses
 export async function GET(req: NextRequest) {
@@ -49,8 +50,21 @@ export async function GET(req: NextRequest) {
 
 // POST /api/businesses — create business
 export async function POST(req: NextRequest) {
-  const userId = await getAuthUserId(req);
-  if (!userId) return error('Unauthorized', 401);
+  const authUser = await getAuthUser(req.headers.get('authorization'));
+  if (!authUser) return error('Unauthorized', 401);
+  const userId = authUser.id;
+
+  // Ensure user exists in DB (app may use Supabase Auth only; server needs users row for FK)
+  await prisma.user.upsert({
+    where: { id: userId },
+    create: {
+      id: userId,
+      email: authUser.email,
+      username: authUser.email?.split('@')[0] ?? null,
+      role: 'individual',
+    },
+    update: {},
+  });
 
   // Check existing
   const existing = await prisma.business.findUnique({ where: { userId } });

@@ -14,14 +14,25 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+export type AuthUser = { id: string; email: string; user_metadata?: Record<string, unknown> };
+
+/**
+ * Verify Supabase JWT and return full auth user (id, email).
+ * Pass the Authorization: Bearer <token> header from the mobile app.
+ */
+export async function getAuthUser(authHeader: string | null): Promise<AuthUser | null> {
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !user) return null;
+  return { id: user.id, email: user.email ?? '', user_metadata: user.user_metadata };
+}
+
 /**
  * Verify Supabase JWT and return user ID.
  * Pass the Authorization: Bearer <token> header from the mobile app.
  */
 export async function verifyAuth(authHeader: string | null): Promise<string | null> {
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  const token = authHeader.slice(7);
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user) return null;
-  return user.id;
+  const u = await getAuthUser(authHeader);
+  return u?.id ?? null;
 }
