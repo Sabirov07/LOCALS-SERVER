@@ -29,6 +29,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const userId = await getAuthUserId(req);
   if (!userId) return error('Unauthorized', 401);
 
+  const conversation = await prisma.conversation.findUnique({
+    where: { id },
+  });
+  if (!conversation) return error('Conversation not found', 404);
+  const isParticipant =
+    conversation.participant1Id === userId || conversation.participant2Id === userId;
+  if (!isParticipant) return error('Forbidden', 403);
+
   const { content, messageType, imageUrl } = await req.json();
   if (!content) return error('content required');
 
