@@ -157,14 +157,17 @@ model ProductFavourite {
 }
 
 model ProductInquiry {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  productId String   @map("product_id") @db.Uuid
-  type      String   // "quote" | "order"
-  quantity  Int      @default(1)
-  message   String?
-  status    String   @default("pending")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  productId       String    @map("product_id") @db.Uuid
+  type            String    // "quote" | "order"
+  quantity        Int       @default(1)
+  message         String?
+  status          String    @default("pending")
+  responsePrice   Decimal?  @map("response_price") @db.Decimal(10, 2)
+  responseMessage String?  @map("response_message")
+  respondedAt     DateTime? @map("responded_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
