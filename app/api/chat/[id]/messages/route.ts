@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     conversation.participant1Id === userId || conversation.participant2Id === userId;
   if (!isParticipant) return error('Forbidden', 403);
 
-  const { content, messageType, imageUrl } = await req.json();
+  const { content, messageType, imageUrl, metadata } = await req.json();
   if (!content) return error('content required');
 
   const message = await prisma.message.create({
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       content,
       messageType: messageType || 'text',
       imageUrl: imageUrl || null,
+      metadata: metadata ?? undefined,
     },
     include: { sender: { select: { id: true, username: true, fullName: true, avatarUrl: true } } },
   });

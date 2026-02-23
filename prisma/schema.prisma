@@ -236,6 +236,7 @@ model Message {
   content        String
   messageType    String   @default("text") @map("message_type")
   imageUrl       String?  @map("image_url")
+  metadata       Json?    // e.g. { productId, quantity, unitPrice, productName } for type "quote"
   isRead         Boolean  @default(false) @map("is_read")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
