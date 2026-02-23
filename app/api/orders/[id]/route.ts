@@ -78,22 +78,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (quantity < 0) return error('Quantity must be non-negative', 400);
     }
 
-    // Update or delete items
+    // Update quantities for items with quantity > 0
     for (const { id: itemId, quantity } of itemsPayload) {
+      if (quantity === 0) continue;
       const item = order.items.find((i) => i.id === itemId);
       if (!item) continue;
-      if (quantity === 0) {
-        await prisma.orderItem.delete({ where: { id: itemId } });
-      } else {
-        const totalPrice = item.unitPrice * quantity;
-        await prisma.orderItem.update({
-          where: { id: itemId },
-          data: { quantity, totalPrice },
-        });
-      }
+      const totalPrice = item.unitPrice * quantity;
+      await prisma.orderItem.update({
+        where: { id: itemId },
+        data: { quantity, totalPrice },
+      });
     }
 
-    // Delete items that are not in payload (removed by client)
+    // Delete items that are removed (qty 0 in payload) or not in payload
     const keptIds = new Set(itemsPayload.filter((x) => x.quantity > 0).map((x) => x.id));
     for (const item of order.items) {
       if (!keptIds.has(item.id)) {
