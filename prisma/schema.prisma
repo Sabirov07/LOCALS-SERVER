@@ -35,6 +35,8 @@ model User {
   cartItems        CartItem[]
   productFavourites ProductFavourite[]
   productInquiries ProductInquiry[]
+  buyerOrders      Order[]    @relation("BuyerOrders")
+  sellerOrders     Order[]    @relation("SellerOrders")
 
   @@map("users")
 }
@@ -68,6 +70,7 @@ model Business {
   categories Category[]
   follows    Follow[]
   quotes     Quote[]
+  orders     Order[]
 
   @@index([userId])
   @@index([city])
@@ -119,6 +122,7 @@ model Product {
   cartItems        CartItem[]
   productFavourites ProductFavourite[]
   productInquiries ProductInquiry[]
+  orderItems       OrderItem[]
 
   @@index([businessId])
   @@index([categoryId])
@@ -364,4 +368,42 @@ model SourcingRequest {
   @@index([buyerId])
   @@index([createdAt(sort: Desc)])
   @@map("sourcing_requests")
+}
+
+model Order {
+  id           String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  buyerId      String      @map("buyer_id") @db.Uuid
+  buyer        User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId     String      @map("seller_id") @db.Uuid
+  seller       User        @relation("SellerOrders", fields: [sellerId], references: [id])
+  businessId   String      @map("business_id") @db.Uuid
+  business     Business    @relation(fields: [businessId], references: [id])
+  status       String      @default("pending")
+  totalAmount  Float       @map("total_amount")
+  note         String?
+  responseNote String?     @map("response_note")
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  items        OrderItem[]
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([businessId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orderId    String  @map("order_id") @db.Uuid
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String  @map("product_id") @db.Uuid
+  product    Product @relation(fields: [productId], references: [id])
+  quantity   Int
+  unitPrice  Float   @map("unit_price")
+  totalPrice Float   @map("total_price")
+
+  @@index([orderId])
+  @@map("order_items")
 }
