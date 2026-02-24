@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
 
     // Ensure user exists in DB (e.g. if they signed up via Auth but profile was not synced)
     const email = authUser.email?.trim() || `${userId}@locals.app`;
-    const preferredUsername = (authUser.user_metadata?.username ?? authUser.email?.split('@')[0])?.trim() || null;
+    const rawUsername = authUser.user_metadata?.username ?? authUser.email?.split('@')[0];
+    const preferredUsername = (typeof rawUsername === 'string' ? rawUsername : '').trim() || null;
     const uniqueUsername = preferredUsername || `user_${userId.replace(/-/g, '')}`;
     await prisma.user.upsert({
       where: { id: userId },

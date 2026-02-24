@@ -1,8 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-const ALLOWED_ORIGINS = [
-  'http://localhost:8081',
+const DEFAULT_ALLOW_ORIGIN = 'http://localhost:8081';
+
+const ALLOWED_ORIGINS: (string | RegExp)[] = [
+  DEFAULT_ALLOW_ORIGIN,
   'http://localhost:19006',
   'http://127.0.0.1:8081',
   'http://127.0.0.1:19006',
@@ -26,7 +28,7 @@ function isOriginAllowed(origin: string | null): boolean {
 }
 
 function corsHeaders(origin: string | null): Record<string, string> {
-  const allowOrigin = origin && isOriginAllowed(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowOrigin: string = origin && isOriginAllowed(origin) ? origin : DEFAULT_ALLOW_ORIGIN;
   return {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
